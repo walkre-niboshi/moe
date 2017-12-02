@@ -5,6 +5,7 @@
 #include<malloc.h>
 #include<signal.h>
 #include<ncurses.h>
+#include <ctype.h>
 #include"gapbuffer.h"
 //#include<locale.h>
 

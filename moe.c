@@ -320,17 +320,16 @@ int shellMode(char *cmd){
   return 0;
 }
 
-// has problem...
-int jumpLine(editorStat *stat, int lineNum){
-  const int startPrintLine = stat->currentLine - stat->y;
-  if(lineNum >= startPrintLine || lineNum < (startPrintLine + COLS - 2)){
-    stat->y = lineNum - startPrintLine;
-    stat->currentLine = lineNum;
+int jumpLine(editorStat *stat, int destination){
+  const int startOfCurrentlyPrintedLines = stat->currentLine - stat->y;
+  if(destination >= startOfCurrentlyPrintedLines && destination < (startOfCurrentlyPrintedLines + LINES - 2)){
+    stat->y += destination - stat->currentLine;
   }else{
-    stat->y = 0;
-    stat->x = stat->lineDigitSpace;
-    stat->currentLine = lineNum;
+    stat->y = (LINES - 2) / 2; // 現在表示されている画面外に出る場合はとりあえず中央付近に表示表示させる
+    if(destination - stat->y < 0) stat->y = destination; // 上方向に行が足りない場合
   }
+  stat->currentLine = destination;
+  stat->x = stat->lineDigitSpace;
   stat->isViewUpdated = true;
   return 0;
 }
@@ -347,11 +346,11 @@ int commandBar(WINDOW **win, gapBuffer *gb, editorStat *stat){
   noecho();
 
   for(int i=0; i<strlen(cmd); i++){
-    if(cmd[0] >= '0' && cmd[0] <= '9'){
-      int lineNum = atoi(cmd) - 1;
-      if(lineNum < 0) lineNum = 0;
-      else if(lineNum > stat->numOfLines) lineNum = stat->numOfLines;
-      jumpLine(stat, lineNum);
+    if(isdigit(cmd[0])){
+      int destination = atoi(cmd) - 1;
+      if(destination < 0) destination = 0;
+      else if(destination >= stat->numOfLines) destination = stat->numOfLines - 1;
+      jumpLine(stat, destination);
       break;
     }else if(cmd[i] == 'w'){
       saveFile(win, gb, stat);

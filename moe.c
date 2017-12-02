@@ -321,7 +321,7 @@ int shellMode(char *cmd){
 }
 
 // has problem...
-int jampLine(editorStat *stat, int lineNum){
+int jumpLine(editorStat *stat, int lineNum){
   const int startPrintLine = stat->currentLine - stat->y;
   if(lineNum >= startPrintLine || lineNum < (startPrintLine + COLS - 2)){
     stat->y = lineNum - startPrintLine;
@@ -351,7 +351,7 @@ int commandBar(WINDOW **win, gapBuffer *gb, editorStat *stat){
       int lineNum = atoi(cmd) - 1;
       if(lineNum < 0) lineNum = 0;
       else if(lineNum > stat->numOfLines) lineNum = stat->numOfLines;
-      jampLine(stat, lineNum);
+      jumpLine(stat, lineNum);
       break;
     }else if(cmd[i] == 'w'){
       saveFile(win, gb, stat);

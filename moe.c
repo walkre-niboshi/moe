@@ -320,6 +320,18 @@ int shellMode(char *cmd){
   return 0;
 }
 
+int trueLineNumberToreturnedLineNumber(editorStat *stat,int trueLineNumber){
+  if(trueLineNumber < 0) return 0;
+
+  int countTrueLine = -1;
+  for(int i = 0; i < stat->numOfLines; ++i){
+    if(stat->trueLine[i]) ++countTrueLine;
+    if(countTrueLine == trueLineNumber) return i;
+  }
+
+  return stat->numOfLines - 1;
+}
+
 int jumpLine(editorStat *stat, int destination){
   const int startOfCurrentlyPrintedLines = stat->currentLine - stat->y;
   if(destination >= startOfCurrentlyPrintedLines && destination < (startOfCurrentlyPrintedLines + LINES - 2)){
@@ -348,9 +360,7 @@ int commandBar(WINDOW **win, gapBuffer *gb, editorStat *stat){
   for(int i=0; i<strlen(cmd); i++){
     if(isdigit(cmd[0])){
       int destination = atoi(cmd) - 1;
-      if(destination < 0) destination = 0;
-      else if(destination >= stat->numOfLines) destination = stat->numOfLines - 1;
-      jumpLine(stat, destination);
+      jumpLine(stat, trueLineNumberToreturnedLineNumber(stat, destination));
       break;
     }else if(cmd[i] == 'w'){
       saveFile(win, gb, stat);

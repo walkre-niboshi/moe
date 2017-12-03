@@ -75,7 +75,7 @@ void printLineAll(WINDOW **win, gapBuffer* gb, editorStat *stat);
 void printStatBarInit(WINDOW **win, gapBuffer *gb, editorStat *stat);
 void printStatBar(WINDOW **win, gapBuffer *gb, editorStat *stat);
 int shellMode(char *cmd);
-int trueLineNumberToreturnedLineNumber(editorStat*, int);
+int trueLineNumberToReturnedLineNumber(editorStat*, int);
 int jumpLine(editorStat *stat, int lineNum);
 int commandBar(WINDOW **win, gapBuffer *gb, editorStat *stat);
 int insNewLine(gapBuffer *gb, editorStat *stat, int position);

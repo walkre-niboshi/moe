@@ -1,7 +1,7 @@
 #include"moe.h"
 
 int debugMode(WINDOW **win, gapBuffer *gb, editorStat *stat){
-  stat->debugMode = ON;
+  stat->debugMode = OFF;
   if(stat->debugMode == OFF ) return 0;
   werase(win[2]);
   mvwprintw(win[2], 0, 0, "debug mode: ");
@@ -155,23 +155,26 @@ int returnLine(gapBuffer *gb, editorStat *stat){
 
   for(int i=0; i<stat->numOfLines; i++){
     if(gapBufferAt(gb, i)->numOfChar > (COLS - stat->lineDigitSpace)){
-      if(stat->trueLine[i + 1] == true) insNewLine(gb, stat, i + 1);
+      if(i == stat->numOfLines - 1) insNewLine(gb, stat, i + 1);
+      else if(stat->trueLine[i + 1] == true) insNewLine(gb, stat, i + 1);
       charArray* leftLine = gapBufferAt(gb, i), *rightLine = gapBufferAt(gb, i + 1);
       int leftLineLength = COLS - stat->lineDigitSpace, rightLineLength = leftLine->numOfChar - leftLineLength;
       for(int j = 0; j < rightLineLength; ++j) charArrayPush(rightLine, leftLine->elements[leftLineLength + j]);
       for(int j = 0; j < rightLineLength; ++j) charArrayPop(leftLine);
       stat->trueLine[i + 1] = false;
-    }else if(stat->trueLine[i + 1] == false && gapBufferAt(gb, i)->numOfChar < (COLS - stat->lineDigitSpace)){
-      charArray *leftLine = gapBufferAt(gb, i), *rightLine = gapBufferAt(gb, i + 1);
-      int moveLength;
-      if((COLS - stat->lineDigitSpace) - leftLine->numOfChar > rightLine->numOfChar) moveLength = rightLine->numOfChar;
-      else moveLength = (COLS - stat->lineDigitSpace) - leftLine->numOfChar;
-      for(int j = 0; j < moveLength; ++j) charArrayPush(leftLine, rightLine->elements[j]);
-      for(int j = 0; j < moveLength; ++j) charArrayDel(rightLine, 0);
-      if(rightLine->numOfChar == 0){
-        gapBufferDel(gb, i + 1, i + 2);
-        stat->numOfLines--;
-        for(int k = i + 1; k < stat->numOfLines - 1; k++) stat->trueLine[k] = stat->trueLine[k + 1];
+    }else if(i != stat->numOfLines - 1 && gapBufferAt(gb, i)->numOfChar < (COLS - stat->lineDigitSpace)){
+      if(stat->trueLine[i + 1] == false){
+        charArray *leftLine = gapBufferAt(gb, i), *rightLine = gapBufferAt(gb, i + 1);
+        int moveLength;
+        if((COLS - stat->lineDigitSpace) - leftLine->numOfChar > rightLine->numOfChar) moveLength = rightLine->numOfChar;
+        else moveLength = (COLS - stat->lineDigitSpace) - leftLine->numOfChar;
+        for(int j = 0; j < moveLength; ++j) charArrayPush(leftLine, rightLine->elements[j]);
+        for(int j = 0; j < moveLength; ++j) charArrayDel(rightLine, 0);
+        if(rightLine->numOfChar == 0){
+          gapBufferDel(gb, i + 1, i + 2);
+          stat->numOfLines--;
+          for(int k = i + 1; k < stat->numOfLines - 1; k++) stat->trueLine[k] = stat->trueLine[k + 1];
+        }
       }
     }
   }
@@ -545,7 +548,7 @@ int keyEnter(gapBuffer* gb, editorStat* stat){
   return 0;
 }
 
-int keyO(gapBuffer *gb, editorStat *stat){
+int openBlankLine(gapBuffer *gb, editorStat *stat){
   if(stat->trueLine[stat->currentLine + 1] == false){
     insNewLine(gb, stat, stat->currentLine + 2);
     stat->y += 2;
@@ -581,14 +584,14 @@ int insBeginOfLine(gapBuffer *gb, editorStat *stat){
   return 0;
 }
 
-int keyX(gapBuffer *gb, editorStat *stat){
+int delCurrentChar(gapBuffer *gb, editorStat *stat){
   charArrayDel(gapBufferAt(gb, stat->currentLine), (stat->x - stat->lineDigitSpace));
   stat->isViewUpdated = true;
   stat->numOfChange++;
   return 0;
 }
 
-int keyD(WINDOW **win, gapBuffer *gb, editorStat *stat){
+int delLine(WINDOW **win, gapBuffer *gb, editorStat *stat){
   gapBufferDel(gb, stat->currentLine, stat->currentLine + 1);
 
   if(stat->numOfLines == 1){
@@ -747,13 +750,13 @@ void cmdNormal(WINDOW **win, gapBuffer *gb, editorStat *stat, int key){
     case 'x':
       if(stat->cmdLoop > gapBufferAt(gb,stat->currentLine)->numOfChar - (stat->x - stat->lineDigitSpace))
         stat->cmdLoop  = gapBufferAt(gb,stat->currentLine)->numOfChar - (stat->x - stat->lineDigitSpace);
-        for(int i=0; i<stat->cmdLoop; i++) keyX(gb, stat);
+        for(int i=0; i<stat->cmdLoop; i++) delCurrentChar(gb, stat);
       break;
     case 'd':
       if(wgetch(win[0]) == 'd'){
         if(stat->cmdLoop > stat->numOfLines - stat->currentLine)
           stat->cmdLoop = stat->numOfLines - stat->currentLine;
-        for(int i=0; i<stat->cmdLoop; i++) keyD(win, gb, stat);
+        for(int i=0; i<stat->cmdLoop; i++) delLine(win, gb, stat);
       }
       break;
     case 'y':
@@ -780,7 +783,7 @@ void cmdNormal(WINDOW **win, gapBuffer *gb, editorStat *stat, int key){
       insertMode(win, gb, stat);
       break;
     case 'o':
-      for(int i=0; i<stat->cmdLoop; i++) keyO(gb, stat);
+      for(int i=0; i<stat->cmdLoop; i++) openBlankLine(gb, stat);
       insertMode(win, gb, stat);
       break;
     case 'i':
@@ -802,8 +805,8 @@ void normalMode(WINDOW **win, gapBuffer *gb, editorStat *stat){
       stat->isViewUpdated = false;
       stat->cmdLoop = 0;
     }
-    debugMode(win, gb, stat);
     wmove(win[0], stat->y, stat->x);
+    debugMode(win, gb, stat);
     key = wgetch(win[0]);
 
     if(key >= '0' && key <= '9'){
@@ -864,7 +867,7 @@ void insertMode(WINDOW **win, gapBuffer* gb, editorStat* stat){
         keyBackSpace(gb, stat);
         break;
       case KEY_DC:
-        keyX(gb, stat);
+        delCurrentChar(gb, stat);
         break;
 
       case 10:    // 10 is Enter key

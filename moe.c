@@ -1,14 +1,14 @@
 #include"moe.h"
 
 int debugMode(WINDOW **win, gapBuffer *gb, editorStat *stat){
-  stat->debugMode = OFF;
+  stat->debugMode = ON;
   if(stat->debugMode == OFF ) return 0;
   werase(win[2]);
   mvwprintw(win[2], 0, 0, "debug mode: ");
   wprintw(win[2], "currentLine: %d ", stat->currentLine);
   wprintw(win[2], "numOfLines: %d ", stat->numOfLines);
   wprintw(win[2], "numOfChar: %d ", gapBufferAt(gb, stat->currentLine)->numOfChar);
-  wprintw(win[2], "ture: %d ", stat->trueLine[stat->currentLine]);
+  wprintw(win[2], "change: %d", stat->numOfChange);
   wprintw(win[2], "elements: %s", gapBufferAt(gb, stat->currentLine)->elements);
   wrefresh(win[2]);
   wmove(win[0], stat->y, stat->x);
@@ -153,13 +153,15 @@ int returnLine(gapBuffer *gb, editorStat *stat){
     stat->trueLine = tmp;
   }
 
-  for(int i=0; i<stat->numOfLines; i++){
+  int i = stat->currentLine - stat->y;
+  int end = i + LINES - 2;
+  for(i; i<end; i++){
     if(gapBufferAt(gb, i)->numOfChar > (COLS - stat->lineDigitSpace)){
       if(i == stat->numOfLines - 1) insNewLine(gb, stat, i + 1);
       else if(stat->trueLine[i + 1] == true) insNewLine(gb, stat, i + 1);
       charArray* leftLine = gapBufferAt(gb, i), *rightLine = gapBufferAt(gb, i + 1);
       int leftLineLength = COLS - stat->lineDigitSpace, rightLineLength = leftLine->numOfChar - leftLineLength;
-      for(int j = 0; j < rightLineLength; ++j) charArrayPush(rightLine, leftLine->elements[leftLineLength + j]);
+      for(int j=0; j < rightLineLength; j++) charArrayInsert(rightLine, leftLine->elements[leftLineLength + j], j);
       for(int j = 0; j < rightLineLength; ++j) charArrayPop(leftLine);
       stat->trueLine[i + 1] = false;
     }else if(i != stat->numOfLines - 1 && gapBufferAt(gb, i)->numOfChar < (COLS - stat->lineDigitSpace)){
@@ -417,7 +419,6 @@ int keyUp(gapBuffer* gb, editorStat* stat){
   if(stat->y == 0){
     stat->currentLine--;
     stat->x = gapBufferAt(gb, stat->currentLine)->numOfChar + stat->lineDigitSpace - 1;
-    stat->numOfChange++;
   }else{
     stat->y--;
     stat->currentLine--;
@@ -433,17 +434,17 @@ int keyDown(gapBuffer* gb, editorStat* stat){
   if(stat->y == LINES - 3){
     stat->currentLine++;
     stat->x = gapBufferAt(gb, stat->currentLine)->numOfChar + stat->lineDigitSpace;
-    stat->numOfChange++;
   }else{
     stat->y++;
     stat->currentLine++;
 
-    if(stat->mode == NORMAL_MODE)
-      if (stat->x != stat->lineDigitSpace && stat->lineDigitSpace + gapBufferAt(gb, stat->currentLine)->numOfChar)
+    if(stat->mode == NORMAL_MODE){
+      if (stat->x != stat->lineDigitSpace && stat->x > stat->lineDigitSpace + gapBufferAt(gb, stat->currentLine)->numOfChar)
         stat->x = stat->lineDigit + gapBufferAt(gb, stat->currentLine)->numOfChar;
-
-    if(stat->x > stat->lineDigitSpace + gapBufferAt(gb, stat->currentLine)->numOfChar)
-      stat->x = stat->lineDigit + gapBufferAt(gb, stat->currentLine)->numOfChar + 1;
+    }else if(stat->mode == INSERT_MODE){
+      if(stat->x > stat->lineDigitSpace + gapBufferAt(gb, stat->currentLine)->numOfChar)
+        stat->x = stat->lineDigit + gapBufferAt(gb, stat->currentLine)->numOfChar + 1;
+    }
   }
   stat->isViewUpdated = true;
   return 0;
